@@ -37,7 +37,11 @@ from lovec_api import BASE, ENDPOINT, MAX_CHARS, TOTAL_TIMEOUT, CheckResult
 
 DEFAULT_EXTS = [".txt", ".md", ".markdown", ".rst"]
 RETRY_STATUSES = {429, 500, 502, 503, 504}
-BACKOFF_SECONDS = [3, 9]  # one short retry, one longer; then give up on the chunk
+BACKOFF_SECONDS = [3, 9]  # transient server errors and timeouts
+# Rate limiting needs a different shape of patience: backing off 3s from a 429
+# just spends another request on the same refusal. Measured on a real scan, 4
+# workers drew 429s on a third of the corpus with the short schedule.
+BACKOFF_429_SECONDS = [15, 45]
 EXCERPT_CHARS = 300
 
 
@@ -164,8 +168,11 @@ async def check_once(client: httpx.AsyncClient, text: str, key: str) -> tuple[di
         raise FatalStop("auth_rejected", "API key rejected (invalid or revoked)")
     if resp.status_code == 402:
         raise FatalStop("insufficient_balance", "API key ran out of balance mid-scan")
-    if resp.status_code in RETRY_STATUSES:
-        return None, f"http:{resp.status_code}"
+    if resp.status_code == 429:
+        # Server-supplied delay wins over our guess when it sends one.
+        retry_after = resp.headers.get("Retry-After", "")
+        suffix = f":{retry_after}" if retry_after.strip().isdigit() else ""
+        return None, f"http:429{suffix}"
     if resp.status_code >= 400:
         return None, f"http:{resp.status_code}"
 
@@ -210,12 +217,23 @@ async def scan_unit(unit: dict, client: httpx.AsyncClient, key: str, sem: asynci
                     "latency_ms": round((time.time() - started) * 1000),
                     "error": None,
                 }
-            retryable = error.startswith("timeout") or error.startswith("network") or (
-                error.startswith("http:") and int(error.split(":")[1]) in RETRY_STATUSES
+            parts = error.split(":")
+            status = int(parts[1]) if error.startswith("http:") and parts[1].isdigit() else None
+            retryable = (
+                error.startswith("timeout")
+                or error.startswith("network")
+                or (status is not None and status in RETRY_STATUSES)
             )
-            if not retryable or attempt >= len(BACKOFF_SECONDS):
+            schedule = BACKOFF_429_SECONDS if status == 429 else BACKOFF_SECONDS
+            if not retryable or attempt >= len(schedule):
                 break
-            await asyncio.sleep(BACKOFF_SECONDS[attempt])
+            delay = schedule[attempt]
+            if status == 429 and len(parts) > 2 and parts[2].isdigit():
+                delay = max(delay, int(parts[2]))
+            await asyncio.sleep(delay)
+
+        if error and error.startswith("http:429"):
+            error = "http:429"  # drop any Retry-After suffix so counts don't fragment
 
         return {
             "unit_id": unit["unit_id"],
@@ -449,7 +467,8 @@ def build_parser() -> argparse.ArgumentParser:
     ap.add_argument("--out", default="lovec-scan-out", help="output directory")
     ap.add_argument("--ext", default=",".join(DEFAULT_EXTS),
                     help=f"comma-separated extensions to read (default: {','.join(DEFAULT_EXTS)})")
-    ap.add_argument("--workers", type=int, default=4, help="concurrent requests (default 4)")
+    ap.add_argument("--workers", type=int, default=2,
+                    help="concurrent requests (default 2; 4 drew 429s on a real scan)")
     ap.add_argument("--max-chars", type=int, default=4500,
                     help=f"chunk size, must be <= API limit of {MAX_CHARS}")
     ap.add_argument("--threshold", type=float, default=None,

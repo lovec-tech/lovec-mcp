@@ -199,6 +199,11 @@ def test_stopped_early_is_surfaced_in_run_and_notes():
 # ---------- network behaviour ----------
 async def _run_unit(handler, monkeypatch, text="hello"):
     monkeypatch.setattr(scan, "BACKOFF_SECONDS", [0, 0])
+    monkeypatch.setattr(scan, "BACKOFF_429_SECONDS", [0, 0])
+    # Retry-After can still push the wait back up past the zeroed schedule, so
+    # neutralise the sleep itself rather than just the constants.
+    real_sleep = asyncio.sleep
+    monkeypatch.setattr(scan.asyncio, "sleep", lambda _d: real_sleep(0))
     unit = {"unit_id": "u1", "doc_id": "d1", "path": "d1", "chunk_index": 0,
             "n_chunks": 1, "text": text}
     state = {"stop": False, "stop_reason": None}
@@ -254,6 +259,53 @@ async def test_rejected_key_stops_the_run(monkeypatch):
 
     _, state = await _run_unit(handler, monkeypatch)
     assert state["stop_reason"]["reason"] == "auth_rejected"
+
+
+async def test_rate_limit_retries_then_records_a_clean_429(monkeypatch):
+    """A 429 is retried on its own slower schedule and recorded without the
+    Retry-After suffix, so errors_by_kind does not fragment into http:429:30."""
+    def handler(request):
+        return httpx.Response(429, headers={"Retry-After": "30"}, json={"error": "rate_limited"})
+
+    row, _ = await _run_unit(handler, monkeypatch)
+    assert row["error"] == "http:429"
+
+
+async def test_rate_limit_recovers_on_retry(monkeypatch):
+    calls = {"n": 0}
+
+    def handler(request):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return httpx.Response(429, json={"error": "rate_limited"})
+        return httpx.Response(200, json={"is_injection": False, "score": 0.1})
+
+    row, _ = await _run_unit(handler, monkeypatch)
+    assert calls["n"] == 3
+    assert row["error"] is None
+
+
+async def test_retry_after_extends_but_never_shortens_the_wait(monkeypatch):
+    """Retry-After is honoured when it is longer than our own backoff."""
+    slept = []
+    real_sleep = asyncio.sleep  # bind before patching, or the stub calls itself
+
+    async def fake_sleep(d):
+        slept.append(d)
+        await real_sleep(0)
+
+    monkeypatch.setattr(scan.asyncio, "sleep", fake_sleep)
+    monkeypatch.setattr(scan, "BACKOFF_429_SECONDS", [5, 5])
+
+    def handler(request):
+        return httpx.Response(429, headers={"Retry-After": "40"}, json={})
+
+    unit = {"unit_id": "u1", "doc_id": "d1", "path": "d1", "chunk_index": 0,
+            "n_chunks": 1, "text": "hi"}
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        await scan.scan_unit(unit, client, "k", asyncio.Semaphore(1),
+                             {"stop": False, "stop_reason": None})
+    assert slept == [40, 40]
 
 
 async def test_bad_shape_is_an_error_not_a_verdict(monkeypatch):
