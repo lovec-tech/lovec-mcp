@@ -4,7 +4,8 @@ version = "0.1.0"
 description = "Local MCP server for the lovec.tech prompt-injection detector"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 keywords = ["mcp", "prompt-injection", "llm-security", "ai-safety"]
 classifiers = [
     "Intended Audience :: Developers",
@@ -27,7 +28,7 @@ dev = [
 lovec-mcp = "server:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
