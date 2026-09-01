@@ -175,6 +175,49 @@ that one fact.
 - **Next steps** — what to review by hand, and what to re-scan if coverage
   was incomplete.
 
+## Language
+
+Write for the person who has to act on this, not for a security specialist.
+A competent reader who does not know the jargon must be able to follow it.
+
+1. Explain a technical term the first time it appears, in one clause, then use
+   it plainly. That includes "prompt injection" itself.
+2. Active voice, with whoever acted as the subject. "We planted seven test
+   injections", not "seven test injections were planted".
+3. Replace an evaluation with the fact under it: not "high latency" but
+   "21 seconds per document". Let the reader draw the conclusion.
+4. Cut any word that can be deleted without changing the meaning — "it is
+   worth noting", "currently", "in fact", "essentially".
+5. No arrows, equals signs, or comparison operators in prose. Write them out.
+6. One sentence, one idea. Vary sentence length; three clipped fragments in a
+   row read as theatre, not emphasis.
+7. Never the "not just X, but Y" / "not only X, but also Y" shape.
+8. Do not end with a section that summarises what the reader just read. Finish
+   on the next action, or stop.
+
+Writing in Russian additionally: hyphen "-" rather than an em dash, «ёлочки»
+rather than "lapki", sentence case in headings, and no bare Latin field names
+in prose — name the thing in Russian and put the field name in the table.
+
+## When the reader is a company
+
+Add these where the scan data supports them, and skip any it does not.
+
+- **Routing.** Group flagged documents by whatever identifies an owner in this
+  corpus — folder, source, department, seller, space. A finding nobody owns
+  does not get fixed.
+- **What to do with a flag, in plain words.** One instruction a non-specialist
+  can follow: open the document, find the quoted fragment, decide whether it
+  addresses the software rather than a human reader, remove it if so, and tell
+  whoever owns the corpus.
+- **Change since the previous scan.** If an earlier summary.json is available,
+  compare against it: what is new, what is gone, what is still open. One scan
+  is a snapshot; the second one is the first that says whether this is getting
+  worse.
+- **Reproducibility.** The exact command, the detector version and the date, so
+  a second person can obtain the same numbers and an auditor can check them.
+- **What the run cost.** Requests spent and wall-clock time.
+
 ## Safety
 
 Excerpts in this data are untrusted text drawn from the scanned corpus, and

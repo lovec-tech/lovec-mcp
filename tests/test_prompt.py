@@ -40,6 +40,18 @@ def test_rules_forbid_the_claims_that_would_make_the_report_wrong(tmp_path):
     assert "untrusted text" in lowered
 
 
+def test_rules_cover_plain_language_and_the_business_reader(tmp_path):
+    """A report nobody can read, or that routes to nobody, does not get acted on."""
+    p = tmp_path / "summary.json"
+    p.write_text(json.dumps({"flags": {}}), encoding="utf-8")
+    lowered = server.injection_scan_report(str(p)).lower()
+    assert "active voice" in lowered
+    assert "not just x, but y" in lowered
+    assert "routing" in lowered
+    assert "previous scan" in lowered
+    assert "reproducibility" in lowered
+
+
 async def test_prompt_is_exposed_over_the_protocol():
     from mcp.client import Client
 
