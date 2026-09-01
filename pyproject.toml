@@ -1,0 +1,24 @@
+[project]
+name = "lovec-mcp"
+version = "0.1.0"
+description = "Local MCP server for the lovec.tech prompt-injection detector"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+keywords = ["mcp", "prompt-injection", "llm-security", "ai-safety"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Natural Language :: Russian",
+]
+dependencies = [
+    "mcp>=2.1,<3",
+    "httpx>=0.27",
+]
+
+[project.scripts]
+lovec-mcp = "server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
