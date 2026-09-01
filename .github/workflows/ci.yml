@@ -44,9 +44,19 @@ jobs:
       - name: Check package metadata
         run: twine check dist/*
 
-      - name: Confirm the wheel actually contains server.py
+      # Run from /tmp so a module can't resolve from the checkout via cwd and
+      # make a missing file look installed. Flat layout drops modules quietly.
+      - name: Confirm the wheel ships every module and both entry points
         run: |
           python -m venv /tmp/wheel-check
           /tmp/wheel-check/bin/pip install dist/*.whl
           cd /tmp
-          /tmp/wheel-check/bin/python -c "import server; assert 'site-packages' in server.__file__"
+          /tmp/wheel-check/bin/python -c "
+          import server, scan, lovec_api
+          for m in (server, scan, lovec_api):
+              assert 'site-packages' in m.__file__, m.__file__
+          assert scan.BASE == lovec_api.BASE == server.BASE
+          "
+          test -x /tmp/wheel-check/bin/lovec-mcp
+          test -x /tmp/wheel-check/bin/lovec-scan
+          /tmp/wheel-check/bin/lovec-scan --help > /dev/null

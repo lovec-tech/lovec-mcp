@@ -32,10 +32,16 @@ dev = [
 
 [project.scripts]
 lovec-mcp = "server:main"
+lovec-scan = "scan:main"
 
 [build-system]
 requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+# Listed explicitly: flat-layout auto-discovery is where a build quietly ships
+# one top-level module and drops the others.
+[tool.setuptools]
+py-modules = ["server", "scan", "lovec_api"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
