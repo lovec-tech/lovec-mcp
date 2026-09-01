@@ -7,8 +7,6 @@
 
 Работает **только с вашим собственным ключом** — сервер ничего не хранит и не шарит,
 это тонкий клиент поверх уже существующего API-ключа/баланса с сайта.
-Никакого обхода монетизации: сколько запросов сделаете — столько спишется с вашего баланса,
-ровно как при прямых вызовах API.
 
 ## Установка
 
@@ -18,8 +16,7 @@ python3 -m venv .venv
 ./.venv/bin/pip install -e .
 ```
 
-Ключ берётся на [lovec.tech](https://lovec.tech) (регистрация → стартовые кредиты
-или пополнение баланса).
+Ключ выпускается на [lovec.tech](https://lovec.tech)
 
 ## Быстрая проверка руками
 
@@ -27,9 +24,6 @@ python3 -m venv .venv
 export LOVEC_KEY=aig_...
 ./.venv/bin/python server.py
 ```
-
-Процесс молча висит и ждёт MCP-клиента на stdin/stdout — это нормально, Ctrl+C для выхода.
-Для проверки логики без реального MCP-клиента:
 
 ```bash
 export LOVEC_KEY=aig_...
@@ -55,8 +49,6 @@ Claude Desktop (`claude_desktop_config.json`) или Claude Code (`.mcp.json`) �
 }
 ```
 
-Абсолютные пути обязательны — MCP-клиент запускает команду не из этой директории.
-
 ## Переменные окружения
 
 | Переменная | По умолчанию | Зачем |
@@ -65,9 +57,3 @@ Claude Desktop (`claude_desktop_config.json`) или Claude Code (`.mcp.json`) �
 | `LOVEC_BASE` | `https://lovec.tech` | другой хост API |
 | `LOVEC_TIMEOUT` | `60` | потолок ожидания одного вызова, секунды |
 
-## Публикация
-
-Локально сервер полностью рабочий. Этот репозиторий (`github.com/lovec-tech/lovec-mcp`)
-и есть верифицированный namespace для публикации в [MCP Registry](https://modelcontextprotocol.io/registry/about)
-и другие каталоги (mcp.so, smithery.ai, glama.ai). Сама подача в реестры — следующий шаг,
-ещё не сделана.
