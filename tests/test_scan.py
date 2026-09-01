@@ -141,6 +141,26 @@ def test_partially_covered_doc_is_excluded_from_denominator():
     assert any("only partly checked" in n for n in s["notes"])
 
 
+def test_flagged_but_partial_doc_counts_as_a_flag_yet_not_in_the_denominator():
+    """A document can be worth reviewing and still not be a valid observation.
+
+    d2 has one flagged chunk and one that errored, so it is a real flag but was
+    never fully checked. It must show up in docs_flagged (someone should look at
+    it) while staying out of the rate denominator.
+    """
+    docs = [{"id": "d1"}, {"id": "d2"}]
+    rows = [
+        _row("d1", 0, 1),
+        _row("d2", 0, 2, score=1.0, is_inj=True),
+        _row("d2", 1, 2, error="http:504"),
+    ]
+    s = scan.summarize(docs, rows, _args(), {}, [], 0)
+    assert s["flags"]["docs_flagged"] == 1
+    assert s["flags"]["docs_flagged_within_full_coverage"] == 0
+    assert s["flags"]["denominator"] == 1
+    assert s["coverage"]["docs_partial"] == 1
+
+
 def test_zero_flags_produces_an_upper_bound_note():
     docs = [{"id": f"d{i}"} for i in range(50)]
     rows = [_row(f"d{i}", 0, 1) for i in range(50)]

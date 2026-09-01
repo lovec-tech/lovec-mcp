@@ -491,11 +491,6 @@ def main() -> None:
               file=sys.stderr)
         return
 
-    key = os.environ.get("LOVEC_KEY")
-    if not key:
-        print("LOVEC_KEY is not set. Get a key at https://lovec.tech", file=sys.stderr)
-        sys.exit(2)
-
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
     results_path = out_dir / "results.jsonl"
@@ -504,6 +499,13 @@ def main() -> None:
     todo = [u for u in units if u["unit_id"] not in done]
     if done:
         print(f"Resuming: {len(done)} chunk(s) already done, {len(todo)} to go", file=sys.stderr)
+
+    # Checked here, not earlier: a fully resumed run makes no requests, and
+    # should still be able to rebuild summary.json from existing results.
+    key = os.environ.get("LOVEC_KEY")
+    if todo and not key:
+        print("LOVEC_KEY is not set. Get a key at https://lovec.tech", file=sys.stderr)
+        sys.exit(2)
 
     state: dict = {"stop": False, "stop_reason": None}
     if todo:
@@ -516,11 +518,15 @@ def main() -> None:
 
     f = summary["flags"]
     c = summary["coverage"]
+    # Coverage and flags are printed as separate lines on purpose. Putting them
+    # in one sentence reads as a rate, and a document can be flagged *and* only
+    # partly checked — it would look like it sat inside the covered set.
     print(
-        f"\nScanned {c['docs_fully_covered']}/{c['docs_total']} document(s) fully; "
-        f"{f['docs_flagged']} flagged.",
+        f"\nDocuments: {c['docs_total']} found, {c['docs_fully_covered']} fully checked, "
+        f"{c['docs_partial']} partly checked.",
         file=sys.stderr,
     )
+    print(f"Flagged for review: {f['docs_flagged']} document(s).", file=sys.stderr)
     for n in summary["notes"]:
         print(f"  note: {n}", file=sys.stderr)
     print(f"\nWrote {results_path} and {summary_path}", file=sys.stderr)
