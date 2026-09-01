@@ -30,10 +30,6 @@ BASE = os.environ.get("LOVEC_BASE", "https://lovec.tech")
 ENDPOINT = "/api/v1/check"
 MAX_CHARS = 5000
 
-# Hard ceiling on total wall-clock per call. httpx's own `timeout=` is a
-# between-bytes limit, not a total-duration one, so a trickling response can run
-# for minutes without tripping it — measured at 174s against the live API on
-# 2026-08-31. An agent blocked that long is worse than a clean error, so bound it.
 TOTAL_TIMEOUT = float(os.environ.get("LOVEC_TIMEOUT", "60"))
 
 mcp = MCPServer("lovec")
@@ -66,12 +62,6 @@ async def check_prompt_injection(text: str) -> dict:
             "split it and check each piece separately."
         )
 
-    # wait_for is the real bound here; httpx's own timeout is the weaker
-    # between-bytes limit and will normally never be the one to fire.
-    # follow_redirects=True: the API's domain has already moved once
-    # (promptidote.tech now 301s to lovec.tech) — httpx doesn't follow by
-    # default, so a future move would otherwise return the redirect body
-    # instead of a real result.
     async with httpx.AsyncClient(timeout=TOTAL_TIMEOUT, follow_redirects=True) as client:
         try:
             resp = await asyncio.wait_for(
