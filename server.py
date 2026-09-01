@@ -38,7 +38,7 @@ from pydantic import BaseModel, Field, ValidationError
 try:
     __version__ = _pkg_version("lovec-mcp")
 except PackageNotFoundError:
-    __version__ = "0.1.0"
+    __version__ = "0.1.1"
 
 BASE = os.environ.get("LOVEC_BASE", "https://lovec.tech")
 ENDPOINT = "/api/v1/check"

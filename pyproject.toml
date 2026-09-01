@@ -1,6 +1,6 @@
 [project]
 name = "lovec-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local MCP server for the lovec.tech prompt-injection detector"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -17,6 +17,12 @@ dependencies = [
     "httpx>=0.27,<1",
     "pydantic>=2,<3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/lovec-tech/lovec-mcp"
+Repository = "https://github.com/lovec-tech/lovec-mcp"
+Issues = "https://github.com/lovec-tech/lovec-mcp/issues"
+API = "https://lovec.tech"
 
 [project.optional-dependencies]
 dev = [
