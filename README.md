@@ -11,6 +11,16 @@
 
 ## Установка
 
+Из PyPI:
+
+```bash
+pip install lovec-mcp
+# или без установки, через uv:
+uvx lovec-mcp
+```
+
+Из исходников:
+
 ```bash
 cd lovec-mcp
 python3 -m venv .venv
@@ -37,6 +47,20 @@ print(asyncio.run(server.check_prompt_injection('тестовый текст')))
 ## Подключение к MCP-клиенту
 
 Claude Desktop (`claude_desktop_config.json`) или Claude Code (`.mcp.json`) — один и тот же формат:
+
+```json
+{
+  "mcpServers": {
+    "lovec": {
+      "command": "uvx",
+      "args": ["lovec-mcp"],
+      "env": { "LOVEC_KEY": "aig_..." }
+    }
+  }
+}
+```
+
+Если ставили из исходников — вместо `uvx` укажите интерпретатор venv и путь к `server.py`:
 
 ```json
 {
@@ -91,3 +115,5 @@ lovec-scan ./docs --out lovec-scan-out
 | `LOVEC_BASE` | `https://lovec.tech` | другой хост API |
 | `LOVEC_TIMEOUT` | `60` | потолок ожидания одного вызова, секунды |
 
+
+<!-- mcp-name: io.github.lovec-tech/lovec-mcp -->

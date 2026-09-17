@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.lovec-tech/lovec-mcp",
+  "title": "Lovec",
+  "description": "Prompt-injection detector for untrusted text before it reaches an LLM (RU/EN). BYO lovec.tech key.",
+  "repository": {
+    "url": "https://github.com/lovec-tech/lovec-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://lovec.tech",
+  "version": "0.1.2",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "lovec-mcp",
+      "version": "0.1.2",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "LOVEC_KEY",
+          "description": "API key issued at https://lovec.tech (format aig_...). Every check is billed to this key's balance.",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "LOVEC_BASE",
+          "description": "Alternative API host",
+          "isRequired": false,
+          "default": "https://lovec.tech"
+        },
+        {
+          "name": "LOVEC_TIMEOUT",
+          "description": "Hard cap for one API call, seconds",
+          "isRequired": false,
+          "default": "60"
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 [project]
 name = "lovec-mcp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Local MCP server for the lovec.tech prompt-injection detector"
 readme = "README.md"
 requires-python = ">=3.10"

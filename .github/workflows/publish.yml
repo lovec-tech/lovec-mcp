@@ -1,0 +1,102 @@
+name: Publish
+
+# Tag v0.1.2 → PyPI release → MCP Registry entry. Both steps authenticate with
+# GitHub OIDC, so the repo holds no tokens:
+#   - PyPI: project settings → Publishing → add a Trusted Publisher
+#     (owner lovec-tech, repo lovec-mcp, workflow publish.yml, environment pypi).
+#   - MCP Registry: grants io.github.lovec-tech/* to this repo's OIDC identity.
+# The tag must match pyproject.toml and server.json; the job refuses otherwise.
+
+"on":
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Tag matches pyproject.toml and server.json
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          PY=$(sed -n 's/^version = "\(.*\)"$/\1/p' pyproject.toml)
+          SJ=$(python -c "import json;d=json.load(open('server.json'));assert d['version']==d['packages'][0]['version'];print(d['version'])")
+          echo "tag=$TAG pyproject=$PY server.json=$SJ"
+          test "$TAG" = "$PY" && test "$TAG" = "$SJ"
+
+      - name: README carries the registry ownership marker
+        run: |
+          grep -q "mcp-name: io.github.lovec-tech/lovec-mcp" README.md
+
+      - name: Install build tooling
+        run: pip install build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Check package metadata
+        run: twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  mcp-registry:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # The registry validates the marker against the README PyPI serves, so
+      # wait until the new version is actually visible there.
+      - name: Wait for PyPI to serve the release
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          for i in $(seq 1 30); do
+            if curl -sf "https://pypi.org/pypi/lovec-mcp/$VERSION/json" | grep -q "mcp-name: io.github.lovec-tech/lovec-mcp"; then
+              echo "PyPI serves $VERSION with the marker"; exit 0
+            fi
+            echo "attempt $i: not yet"; sleep 20
+          done
+          echo "PyPI never served $VERSION with the marker"; exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Validate server.json
+        run: ./mcp-publisher validate
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish
+
+      - name: Show the registry entry
+        run: curl -s "https://registry.modelcontextprotocol.io/v0.1/servers?search=io.github.lovec-tech/lovec-mcp"
